@@ -1,7 +1,7 @@
 #!/bin/bash
 # php-fpm-advisor.sh
 # prepared by dicky.dwijanto@myspsolution.com
-# last update: May 20th, 2025
+# last update: May 19th, 2025
 
 # average of orangt per process, in kb, set it when required
 MIN_ORANGT_MEM_PER_PROCESS=110000
@@ -62,8 +62,6 @@ if [ -z "${WWW_CONF}" ]; then
   exit 1
 fi
 
-WWW_CONF_BACKUP="${WWW_CONF}.before_update"
-
 PHP_FPM_SERVICE=$(systemctl list-unit-files --type=service --no-legend | awk '{print $1}' | grep -E '^php.*fpm\.service$' | head -n 1)
 
 if [ -n "${PHP_FPM_SERVICE}" ]; then
@@ -91,12 +89,6 @@ MEDIAN_PHP_FPM_RAM=$(
   }'
 )
 
-if [ -z "${MEDIAN_PHP_FPM_RAM}" ]; then
-  echo ""
-  echo -e "No ${BLD}php-fpm pool${STD} processes found. Exiting."
-  exit 1
-fi
-
 # Average (Mean), rounded to integer
 AVG_PHP_FPM_RAM=$(
   ps aux | grep -E 'php-fpm.*pool' | grep -v grep | awk '{
@@ -116,26 +108,32 @@ if [ "${AVG_PHP_FPM_RAM}" -gt "${MEDIAN_PHP_FPM_RAM}" ]; then
   MEDIAN_PHP_FPM_RAM="${AVG_PHP_FPM_RAM}"
 fi
 
+if [ -z "${MEDIAN_PHP_FPM_RAM}" ]; then
+  echo ""
+  echo -e "No ${BLD}php-fpm pool${STD} processes found. Exiting."
+  exit 1
+fi
+
 # Ensure MEDIAN_PHP_FPM_RAM is at least MIN_ORANGT_MEM_PER_PROCESS
 if [ "${MEDIAN_PHP_FPM_RAM}" -lt ${MIN_ORANGT_MEM_PER_PROCESS} ]; then
-  MEDIAN_PHP_FPM_RAM=${MIN_ORANGT_MEM_PER_PROCESS}
+    MEDIAN_PHP_FPM_RAM=${MIN_ORANGT_MEM_PER_PROCESS}
 fi
 
 # Calculate PHP_FPM_MIN_CHILDREN_INT based on available RAM
+
 RAM_TOTAL_MB=$(free -m | grep '^Mem:' | awk '{print $2}')
 RAM_TOTAL_USABLE_GB=$(awk "BEGIN {printf \"%.1f\",${RAM_TOTAL_MB}/1024}")
-RAM_TOTAL_GB=$(echo ${RAM_TOTAL_USABLE_GB} | awk '{print int($1+0.55)}')
 
 if awk "BEGIN {exit !(${RAM_TOTAL_USABLE_GB} < 4)}"; then
-  PHP_FPM_MIN_CHILDREN_INT=5
+    PHP_FPM_MIN_CHILDREN_INT=5
 elif awk "BEGIN {exit !(${RAM_TOTAL_USABLE_GB} < 8)}"; then
-  PHP_FPM_MIN_CHILDREN_INT=10
+    PHP_FPM_MIN_CHILDREN_INT=10
 elif awk "BEGIN {exit !(${RAM_TOTAL_USABLE_GB} < 16)}"; then
-  PHP_FPM_MIN_CHILDREN_INT=20
+    PHP_FPM_MIN_CHILDREN_INT=20
 elif awk "BEGIN {exit !(${RAM_TOTAL_USABLE_GB} < 32)}"; then
-  PHP_FPM_MIN_CHILDREN_INT=30
+    PHP_FPM_MIN_CHILDREN_INT=30
 else
-  PHP_FPM_MIN_CHILDREN_INT=60
+    PHP_FPM_MIN_CHILDREN_INT=60
 fi
 
 echo ""
@@ -184,21 +182,18 @@ CURRENT_MAX_REQUESTS=$(grep -E '^\s*[;#]?\s*pm\.max_requests\s*=' "${WWW_CONF}" 
 if [ -z "${CURRENT_PM}" ]; then
   echo ""
   echo -e "${RED}pm value not found${STD}"
-  echo -e "Please check or unremark line: ${BLD}pm = ${STD} on file: ${BLD}${WWW_CONF}${STD}"
   exit 1
 fi
 
 if [ -z "${CURRENT_MAX_CHILDREN}" ]; then
   echo ""
   echo -e "${RED}pm.max_children value not found${STD}"
-  echo -e "Please check or unremark line: ${BLD}pm.max_children = ${STD} on file: ${BLD}${WWW_CONF}${STD}"
   exit 1
 fi
 
 if [ -z  "${CURRENT_MAX_REQUESTS}" ]; then
   echo ""
-  echo -e "${RED}pm.max_requests value not found${STD}"
-  echo -e "Please check or unremark line: ${BLD}pm.max_requests = ${STD} on file: ${BLD}${WWW_CONF}${STD}"
+  echo -e "${RED}pm.max_children value not found${STD}"
   exit 1
 fi
 
@@ -206,7 +201,7 @@ if [ "${PARAM1}" == "i" ]; then
   echo "Information only, no changing"
   echo "-----------------------------"
   echo ""
-  echo -e "pm = ${YLW}$CURRENT_PM${STD}"
+  echo -e "pm = ${YLW}static${STD}"
   echo -e "pm.max_children = ${YLW}${CURRENT_MAX_CHILDREN}${STD}"
   echo -e "pm.max_requests = ${YLW}${CURRENT_MAX_REQUESTS}${STD}"
   echo ""
@@ -240,7 +235,11 @@ fi
 # if [ "${PARAM1}" != "y" ];
 
 echo -e "${BLD}Stopping ${PHP_FPM_SERVICE} service ...${STD}"
-[ "${IS_SA}" -eq 1 ] && systemctl stop "${PHP_FPM_SERVICE}" || sudo systemctl stop "${PHP_FPM_SERVICE}"
+if [ "${IS_SA}" -eq 1 ]; then
+  systemctl stop "${PHP_FPM_SERVICE}"
+else
+  sudo systemctl stop "${PHP_FPM_SERVICE}"
+fi
 
 sleep 5
 
@@ -251,7 +250,7 @@ PHP_FPM_MAX_CHILDREN_INT=$(echo "${AVAILABLE_MEMORY}/${MEDIAN_PHP_FPM_RAM}" | bc
 
 # Ensure PHP_FPM_MAX_CHILDREN_INT is at least PHP_FPM_MIN_CHILDREN_INT
 if [ "${PHP_FPM_MAX_CHILDREN_INT}" -lt "${PHP_FPM_MIN_CHILDREN_INT}" ]; then
-  PHP_FPM_MAX_CHILDREN_INT="${PHP_FPM_MIN_CHILDREN_INT}"}
+    PHP_FPM_MAX_CHILDREN_INT="${PHP_FPM_MIN_CHILDREN_INT}"}
 fi
 
 echo ""
@@ -262,11 +261,6 @@ echo -e "Calculated PHP FPM Max Children (int): ${BLD}${AVAILABLE_MEMORY} / ${ME
 echo ""
 
 if [ "${CURRENT_PM}" != "static" ]; then
-  if [ ! -f "${WWW_CONF_BACKUP}" ]; then
-    echo -e "Create backup file: ${BLD}${WWW_CONF_BACKUP}${STD} ..."
-    [ "${IS_SA}" -eq 1 ] && cp "${WWW_CONF}" "${WWW_CONF_BACKUP}" || sudo cp "${WWW_CONF}" "${WWW_CONF_BACKUP}"
-  fi
-
   echo -e "${BLU}Updating pm from ${CURRENT_PM} to ${YLW}static.${BLU}${STD}"
   sudo sed -i "s/^pm =.*/pm = static/" "${WWW_CONF}"
 else
@@ -274,11 +268,6 @@ else
 fi
 
 if [ "${CURRENT_MAX_REQUESTS}" -gt 200 ]; then
-  if [ ! -f "${WWW_CONF_BACKUP}" ]; then
-    echo -e "Create backup file: ${BLD}${WWW_CONF_BACKUP}${STD} ..."
-    [ "${IS_SA}" -eq 1 ] && cp "${WWW_CONF}" "${WWW_CONF_BACKUP}" || sudo cp "${WWW_CONF}" "${WWW_CONF_BACKUP}"
-  fi
-
   echo -e "${BLU}pm.max_request ${YLW}(${CURRENT_MAX_REQUESTS}) > 200${BLU}, set to ${YLW}200.${BLU}${STD}"
   if [ "${IS_SA}" -eq 1 ]; then
     sed -i "s/^pm\.max_requests *=.*/pm.max_requests = 200/" "${WWW_CONF}"
@@ -290,11 +279,6 @@ else
 fi
 
 if [ "${PHP_FPM_MAX_CHILDREN_INT}" -lt "${CURRENT_MAX_CHILDREN}" ]; then
-  if [ ! -f "${WWW_CONF_BACKUP}" ]; then
-    echo -e "Create backup file: ${BLD}${WWW_CONF_BACKUP}${STD} ..."
-    [ "${IS_SA}" -eq 1 ] && cp "${WWW_CONF}" "${WWW_CONF_BACKUP}" || sudo cp "${WWW_CONF}" "${WWW_CONF_BACKUP}"
-  fi
-
   echo -e "${BLU}pm.max_children ${YLW}(${CURRENT_MAX_CHILDREN}) > calculated (${PHP_FPM_MAX_CHILDREN_INT})${BLU}, change applied.${STD}"
   if [ "${IS_SA}" -eq 1 ]; then
     sed -i "s/^pm\.max_children *=.*/pm.max_children = ${PHP_FPM_MAX_CHILDREN_INT}/" "${WWW_CONF}"
@@ -313,9 +297,6 @@ else
   sudo systemctl start "${PHP_FPM_SERVICE}"
 fi
 
-# Grab current pm
-CURRENT_PM=$(grep "^pm =" "${WWW_CONF}" | awk -F= '{gsub(/^ +| +$/, "", $2); print $2}')
-
 # Grab current pm.max_children (ignoring whitespace and commented lines)
 CURRENT_MAX_CHILDREN=$(grep -E '^\s*[^#;]*pm\.max_children\s*=' "${WWW_CONF}" | awk -F= '{gsub(/[ \t]/,"",$2); print $2}' | tail -n 1)
 
@@ -327,7 +308,7 @@ echo -e "php fpm file config: ${YLW}${WWW_CONF}${STD}"
 echo ""
 echo "--------------------------"
 echo ""
-echo -e "pm = ${YLW}${CURRENT_PM}${STD}"
+echo -e "pm = ${YLW}static${STD}"
 echo -e "pm.max_children = ${YLW}${CURRENT_MAX_CHILDREN}${STD}"
 echo -e "pm.max_requests = ${YLW}${CURRENT_MAX_REQUESTS}${STD}"
 echo ""
