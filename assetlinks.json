@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.sps.orant",
+      "sha256_cert_fingerprints": [
+        "4F:A0:17:4D:2B:6B:53:19:8C:8D:70:02:04:0C:37:1A:B5:A5:A4:2A:FA:83:CC:36:76:51:DA:3B:D3:2A:6E:D5"
+      ]
+    }
+  }
+]

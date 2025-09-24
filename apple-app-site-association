@@ -1,0 +1,67 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "6ENF3HUTSU.com.sps.orant"
+        ],
+        "components": [
+          {
+            "#": "no_universal_links",
+            "exclude": true,
+            "comment": "Matches any URL with a fragment that equals no_universal_links and instructs the system not to open it as a universal link."
+          },
+          {
+            "/": "/sso/*",
+            "comment": "Matches any URL with a path that starts with /knowledge/."
+          },
+          {
+            "/": "/knowledge/*",
+            "comment": "Matches any URL with a path that starts with /knowledge/."
+          },
+          {
+            "/": "/news/*",
+            "comment": "Matches any URL with a path that starts with /news/."
+          },
+          {
+            "/": "/regulation/*",
+            "comment": "Matches any URL with a path that starts with /regulation/."
+          },
+          {
+            "/": "/training/*",
+            "comment": "Matches any URL with a path that starts with /training/."
+          },
+          {
+            "/": "/competition/*",
+            "comment": "Matches any URL with a path that starts with /competition/."
+          },
+          {
+            "/": "/event/*",
+            "comment": "Matches any URL with a path that starts with /event/."
+          },
+          {
+            "/": "/group/*",
+            "comment": "Matches any URL with a path that starts with /group/."
+          },
+          {
+            "/": "/job_vacancy/*",
+            "comment": "Matches any URL with a path that starts with /job_vacancy/."
+          },
+          {
+            "/": "/moment/*",
+            "comment": "Matches any URL with a path that starts with /moment/."
+          },
+          {
+            "/": "/user/*",
+            "comment": "Matches any URL with a path that starts with /user/."
+          }
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": [
+      "6ENF3HUTSU.com.sps.orant"
+    ]
+  }
+}
