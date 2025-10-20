@@ -2,8 +2,8 @@
 # maintenance.sh
 # scheduled maintenance script for using with cronjob
 # prepared by dicky.dwijanto@myspsolution.com
-# last update: Sept 23th, 2025
-VERSION="1.1"
+# last update: Okt 17th, 2025
+VERSION="1.3"
 
 ORANGT_CONFIG_FILE="/etc/orangt.conf"
 
@@ -140,9 +140,18 @@ find "${ORANGT_DIR}" -type f -name artisan | while read -r ARTISAN_FILE; do
     sudo find "${LARAVEL_DIR_TEMP}" -type f -mtime +1 -delete
   fi
 
+  LARAVEL_SESSION_DIR="${DIR_PROJECT}/storage/framework/sessions"
+  if [ -d "${LARAVEL_SESSION_DIR}" ]; then
+    echo "sudo find ${LARAVEL_SESSION_DIR} -type f -mmin +1440 -delete"
+    sudo find "${LARAVEL_SESSION_DIR}" -type f -mmin +1440 -delete
+  fi
+
   # Run the artisan optimize:clear command
   echo "php artisan optimize:clear"
   php -d error_reporting=E_ERROR artisan optimize:clear 2>/dev/null
+
+  echo "php artisan queue:prune-failed"
+  php artisan queue:prune-failed 2>/dev/null
 done
 
 if [ -d "${ORANGT_NGINX_LOG_DIR}" ]; then
